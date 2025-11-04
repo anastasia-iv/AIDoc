@@ -1,0 +1,24 @@
+data:
+  dataset: "nfcorpus"
+  split_train: "train"
+  split_eval: "dev"
+  top_k_candidates: 100
+
+training:
+  random_seed: 42
+  batch_size: 16
+  num_epochs: 2
+  lr: 2e-5
+  max_length: 256
+  gradient_accumulation: 1
+  eval_every_steps: 1000
+
+paths:
+  output_dir: "artifacts/medsearch-miniLM/"
+  cache_dir: "~/.cache/beir"
+
+logging:
+  level: "INFO"
+
+hardware:
+  device: "cpu"
