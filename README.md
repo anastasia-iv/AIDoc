@@ -118,3 +118,79 @@ python scripts/parse_medmentions.py \
 
 3. После этого в папке data/ содержится необходимый формат датасета - medmentions_clf.csv
 4. Путь к нему прописывается в параметрах конфигурационного файла configs/train.yaml для запуска обучения модели 
+```
+
+# Результаты экспериментов
+
+### Постановка эксперимента
+
+В рамках **Task 2** был проведён базовый эксперимент по обучению модели
+для задачи **классификации медицинских сущностей по семантическим типам**.
+
+**Задача:**  
+по текстовому упоминанию медицинской сущности (с опциональным контекстом из PubMed-аннотации)
+предсказать её UMLS Semantic Type (подмножество ST21).
+
+**Данные:**
+- датасет: MedMentions (версия ST21pv);
+- формат задачи: multi-class text classification;
+- вход: `text + context`;
+- выход: 1 из 21 семантического типа.
+
+**Модель:**
+- базовая модель: `cross-encoder/ms-marco-MiniLM-L-6-v2`;
+- классификационная голова переинициализирована под 21 класс;
+- обучение выполнялось с fine-tuning всей модели.
+
+**Параметры обучения (основные):**
+- число эпох: 2;
+- batch size: 16;
+- learning rate: 2e-5;
+- max sequence length: 256;
+- устройство: GPU (CUDA).
+
+---
+
+### Метрики качества
+
+Оценка проводилась на тестовой выборке, отложенной от исходного датасета.
+
+Полученные метрики:
+
+- **Accuracy:** 0.8428  
+- **Macro F1-score:** 0.6918  
+- **Test loss:** 0.6116  
+
+Полный вывод логов на тесте:
+
+```text
+TEST metrics: {
+  'eval_loss': 0.6115981340408325,
+  'eval_accuracy': 0.8428198947213066,
+  'eval_macro_f1': 0.6917985048413187,
+  'eval_runtime': 17.7198,
+  'eval_samples_per_second': 1147.135,
+  'eval_steps_per_second': 35.892,
+  'epoch': 2.0
+}
+```
+
+## Пример инференса
+```bash
+python3 -c "from med_entity_clf.predict import predict; \
+print(predict(
+    'artifacts/medsearch-miniLM',
+    ['cystic fibrosis'],
+    ['Pseudomonas aeruginosa infection in cystic fibrosis patients...'],
+    use_context=True
+))"
+```
+
+```bash
+[{
+  'text': 'cystic fibrosis',
+  'pred_id': 7,
+  'pred_label': 'T038',
+  'pred_prob': 0.9540998339653015
+}]
+```
