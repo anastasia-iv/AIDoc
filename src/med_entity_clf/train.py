@@ -32,7 +32,7 @@ def tokenize_dataset(dd, tokenizer, hf_cfg: HFConfig, data_cfg: DataConfig, labe
     label_col = data_cfg.label_col
 
     def _map(ex):
-        context = ex[ctx_col] if (ctx_col is not None and ctx_col in ex) else None
+        context = ex.get(ctx_col) if ctx_col else None
         x = format_input(ex[text_col], context, hf_cfg.use_context)
         tok = tokenizer(x, truncation=True, max_length=hf_cfg.max_length)
         tok["labels"] = label2id[ex[label_col]]
@@ -40,17 +40,16 @@ def tokenize_dataset(dd, tokenizer, hf_cfg: HFConfig, data_cfg: DataConfig, labe
 
     return dd.map(_map, remove_columns=dd["train"].column_names)
 
+_ACC = evaluate.load("accuracy")
+_F1 = evaluate.load("f1")
+
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
-
-    acc = evaluate.load("accuracy")
-    f1 = evaluate.load("f1")
-
-    out = {}
-    out["accuracy"] = acc.compute(predictions=preds, references=labels)["accuracy"]
-    out["macro_f1"] = f1.compute(predictions=preds, references=labels, average="macro")["f1"]
-    return out
+    return {
+        "accuracy": _ACC.compute(predictions=preds, references=labels)["accuracy"],
+        "macro_f1": _F1.compute(predictions=preds, references=labels, average="macro")["f1"],
+    }
 
 def train_pipeline(
     seed: int,
@@ -80,10 +79,10 @@ def train_pipeline(
         per_device_eval_batch_size=tr_cfg.per_device_eval_batch_size,
         warmup_ratio=tr_cfg.warmup_ratio,
         fp16=tr_cfg.fp16,
-        evaluation_strategy=tr_cfg.eval_strategy,
+        eval_strategy=tr_cfg.eval_strategy,
         save_strategy=tr_cfg.save_strategy,
         load_best_model_at_end=True,
-        metric_for_best_model=tr_cfg.metric_for_best_model.replace("eval_", ""),
+        metric_for_best_model=tr_cfg.metric_for_best_model,
         greater_is_better=tr_cfg.greater_is_better,
         logging_steps=50,
         report_to="none",

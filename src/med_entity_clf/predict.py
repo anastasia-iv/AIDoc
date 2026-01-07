@@ -42,3 +42,8 @@ def predict(
             "pred_prob": float(probs[i, preds[i]]),
         })
     return res
+
+def logits_to_probs(logits: np.ndarray) -> np.ndarray:
+    x = logits - logits.max(axis=1, keepdims=True)
+    p = np.exp(x)
+    return p / p.sum(axis=1, keepdims=True)

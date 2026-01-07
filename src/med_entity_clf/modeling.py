@@ -18,6 +18,7 @@ def get_model(cfg: HFConfig, num_labels: int, id2label: dict, label2id: dict):
         num_labels=num_labels,
         id2label=id2label,
         label2id=label2id,
+        ignore_mismatched_sizes=True,
     )
 
 def format_input(text: str, context: Optional[str], use_context: bool) -> str:

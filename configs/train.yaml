@@ -3,6 +3,10 @@ data:
   split_train: "train"
   split_eval: "dev"
   top_k_candidates: 100
+  local_path: "data/corpus_pubtator.csv"
+  text_col: "text"
+  context_col: "context"
+  label_col: "label"
 
 training:
   random_seed: 42
@@ -12,6 +16,8 @@ training:
   max_length: 256
   gradient_accumulation: 1
   eval_every_steps: 1000
+  metric_for_best_model: "macro_f1"
+  greater_is_better: true
 
 paths:
   output_dir: "artifacts/medsearch-miniLM/"
@@ -21,4 +27,4 @@ logging:
   level: "INFO"
 
 hardware:
-  device: "cpu"
+  device: "cuda:0" #"cpu"
