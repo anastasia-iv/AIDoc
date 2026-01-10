@@ -40,4 +40,4 @@ jobs:
           HF_HUB_DISABLE_TELEMETRY: "1"
           TRANSFORMERS_NO_ADVISORY_WARNINGS: "1"
         run: |
-          pytest -q
+          pytest -q --cov=med_entity_clf --cov-report=term-missing
