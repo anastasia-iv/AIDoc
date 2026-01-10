@@ -12,3 +12,7 @@ src/med_entity_clf.egg-info/dependency_links.txt
 src/med_entity_clf.egg-info/top_level.txt
 src/med_entity_clf/cli/__init__.py
 src/med_entity_clf/cli/train_cli.py
+tests/test_data_validation.py
+tests/test_postprocess.py
+tests/test_splits.py
+tests/test_tokenization.py

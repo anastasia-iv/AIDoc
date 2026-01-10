@@ -1,9 +1,58 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Sequence
 
+import numpy as np
 import pandas as pd
 from datasets import Dataset, DatasetDict
+
+class DataValidationError(ValueError):
+    """Raised when input dataset does not match expected schema."""
+    
+def validate_dataframe(
+    df: pd.DataFrame,
+    *,
+    text_col: str,
+    label_col: str,
+    context_col: Optional[str] = None,
+    allow_empty_context: bool = True,
+    dropna: bool = True,
+    min_rows: int = 1,
+) -> pd.DataFrame:
+    """
+    Validate and (optionally) clean a dataframe for text classification.
+
+    Returns a cleaned dataframe (copy) if validation passes, otherwise raises DataValidationError.
+    """
+
+    required = [text_col, label_col]
+    if context_col:
+        required.append(context_col)
+
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise DataValidationError(f"Missing required columns: {missing}. Available: {list(df.columns)}")
+
+    out = df.copy()
+
+    if dropna:
+        out = out.dropna(subset=[text_col, label_col] + ([context_col] if context_col else []))
+
+    out[text_col] = out[text_col].astype(str).str.strip()
+    out[label_col] = out[label_col].astype(str).str.strip()
+
+    if context_col:
+        out[context_col] = out[context_col].astype(str)
+        if allow_empty_context:
+            out[context_col] = out[context_col].fillna("").astype(str)
+        out[context_col] = out[context_col].str.strip()
+
+    out = out[(out[text_col] != "") & (out[label_col] != "")]
+
+    if len(out) < min_rows:
+        raise DataValidationError(f"Dataset has too few rows after cleaning: {len(out)} < {min_rows}")
+
+    return out
 
 @dataclass
 class DataConfig:
@@ -17,7 +66,9 @@ class DataConfig:
 
 def load_local_dataset(cfg: DataConfig) -> Dataset:
     if cfg.local_path is None:
-        raise ValueError("data.local_path is null. Provide a local CSV/JSONL with columns text/label(/context).")
+        raise ValueError(
+            "data.local_path is null. Provide a local CSV/JSONL with columns text/label(/context)."
+        )
 
     if cfg.local_path.endswith(".csv"):
         df = pd.read_csv(cfg.local_path)
@@ -26,23 +77,21 @@ def load_local_dataset(cfg: DataConfig) -> Dataset:
     else:
         raise ValueError("Unsupported file type. Use .csv or .jsonl")
 
-    required = {cfg.text_col, cfg.label_col}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing required columns: {missing}")
-
-    if cfg.context_col is not None and cfg.context_col not in df.columns:
-        raise ValueError(f"context_col='{cfg.context_col}' not found in data")
-
-    df = df.dropna(subset=[cfg.text_col, cfg.label_col]).copy()
-    df[cfg.text_col] = df[cfg.text_col].astype(str)
-    df[cfg.label_col] = df[cfg.label_col].astype(str)
-
-    if cfg.context_col is not None:
-        df[cfg.context_col] = df[cfg.context_col].fillna("").astype(str)
+    df = validate_dataframe(
+        df,
+        text_col=cfg.text_col,
+        label_col=cfg.label_col,
+        context_col=cfg.context_col,
+        allow_empty_context=True,
+        dropna=True,
+        min_rows=10,
+    )
 
     if cfg.max_samples:
-        df = df.sample(n=min(cfg.max_samples, len(df)), random_state=42).reset_index(drop=True)
+        df = df.sample(
+            n=min(cfg.max_samples, len(df)),
+            random_state=42
+        ).reset_index(drop=True)
 
     return Dataset.from_pandas(df, preserve_index=False)
 
