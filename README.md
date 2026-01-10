@@ -62,7 +62,7 @@
 - доля неуспешных запросов: ≤ 1%;
 - потребление памяти: в пределах доступных ресурсов окружения.
 
-**Целеве показатели**
+**Целевые показатели**
 - p95 latency ≤ 200 ms на CPU для 1 запроса (батч=1)
 - память: ≤ 1.5 GB RAM (CPU-инференс)
 
@@ -107,13 +107,14 @@ med-entity-clf/
 
 ```bash
 unzip corpus_pubtator.txt.zip
+```
 
 2. Далее запускаем предобработку командой
 ```bash
 python scripts/parse_medmentions.py \
     --input data/corpus_pubtator.txt \
     --output data/medmentions_clf.csv
-
+```
 Заменив параметры на целевые
 
 3. После этого в папке data/ содержится необходимый формат датасета - medmentions_clf.csv
