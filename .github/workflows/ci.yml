@@ -33,7 +33,8 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install -e .
+          pip install -r requirements-dev.txt
 
       - name: Run tests
         env:
