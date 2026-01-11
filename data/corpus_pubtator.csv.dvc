@@ -1,0 +1,5 @@
+outs:
+- md5: 2a4cb30d299437a1a18e6603931b5cbc
+  size: 355206431
+  hash: md5
+  path: corpus_pubtator.csv

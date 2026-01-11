@@ -1,0 +1,5 @@
+outs:
+- md5: 6d72689e91bc5f2b3a63a2c7862b69b5
+  size: 17012359
+  hash: md5
+  path: corpus_pubtator.txt

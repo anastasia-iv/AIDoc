@@ -1,0 +1,6 @@
+outs:
+- md5: b418900ff33e06ab358feb29c8fd211a.dir
+  size: 639410100
+  nfiles: 29
+  hash: md5
+  path: medsearch-miniLM
