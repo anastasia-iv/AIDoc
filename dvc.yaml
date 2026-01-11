@@ -1,0 +1,30 @@
+stages:
+  prepare:
+    cmd: python scripts/pubtatorparsing.py --input data/corpus_pubtator.txt --output data/corpus_pubtator.csv
+    deps:
+      - data/corpus_pubtator.txt
+      - scripts/pubtatorparsing.py
+    outs:
+      - data/corpus_pubtator.csv
+
+  train:
+    cmd: python scripts/train.py --config configs/train.yaml --model_config configs/model.yaml
+    deps:
+      - configs/train.yaml
+      - configs/model.yaml
+      - data/corpus_pubtator.csv
+      - scripts/train.py
+      - src/med_entity_clf
+    outs:
+      - artifacts/medsearch-miniLM
+
+  evaluate:
+    cmd: python scripts/evaluate.py --config configs/train.yaml --model_dir artifacts/medsearch-miniLM --out artifacts/eval/metrics.json
+    deps:
+      - artifacts/medsearch-miniLM
+      - configs/train.yaml
+      - data/corpus_pubtator.csv
+      - scripts/evaluate.py
+      - src/med_entity_clf
+    metrics:
+      - artifacts/eval/metrics.json
