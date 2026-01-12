@@ -28,3 +28,8 @@ logging:
 
 hardware:
   device: "cuda:0" #"cpu"
+
+  mlflow:
+  experiment_name: "med_entity_clf"
+  tracking_uri: "file:./mlruns"   # можно убрать, но ок оставить
+  run_name: null

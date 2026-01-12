@@ -1,6 +1,10 @@
 import argparse
 import yaml
 import logging
+import hashlib
+from pathlib import Path
+
+import mlflow
 import torch
 
 from med_entity_clf.utils import setup_logging, set_seed, ensure_dir
@@ -9,14 +13,21 @@ from med_entity_clf.modeling import HFConfig
 from med_entity_clf.train import TrainConfig, train_pipeline
 
 
+def sha256_file(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True, help="Path to YAML config")
     ap.add_argument("--output_dir", default=None, help="Override paths.output_dir from config")
     ap.add_argument(
         "--model_config",
-        required=True,
-        help="Path to model.yaml"
+        default="configs/model.yaml",
+        help="Path to model.yaml (default: configs/model.yaml)"
     )
     args = ap.parse_args()
 
@@ -50,10 +61,9 @@ def main():
         max_samples=cfg["data"].get("max_samples", None),
     )
 
-    # model config
     hf_cfg = HFConfig(
         base_model=model_cfg["base_name"],
-        use_context=True,
+        use_context=bool(cfg.get("hf", {}).get("use_context", True)),
         max_length=int(cfg["training"].get("max_length", 256)),
     )
 
@@ -69,27 +79,69 @@ def main():
         fp16=bool(cfg["training"].get("fp16", False)),
         eval_strategy=str(cfg["training"].get("eval_strategy", "epoch")),
         save_strategy=str(cfg["training"].get("save_strategy", "epoch")),
-        metric_for_best_model=str(cfg["training"].get("metric_for_best_model", "eval_macro_f1")),
+        metric_for_best_model=str(cfg["training"].get("metric_for_best_model", "macro_f1")),
         greater_is_better=bool(cfg["training"].get("greater_is_better", True)),
     )
 
-    # device (опционально)
-    device_cfg = cfg.get("hardware", {}).get("device", "cpu")
-    if device_cfg.startswith("cuda") and torch.cuda.is_available():
-        logger.info("CUDA available: %s", torch.cuda.get_device_name(0))
+    mlflow.set_experiment(cfg.get("mlflow", {}).get("experiment_name", "med_entity_clf"))
 
-    logger.info("Config loaded from: %s", args.config)
-    logger.info("Output dir: %s", output_dir)
-    logger.info("Dataset: %s", data_cfg.local_path)
-    logger.info("Base model: %s", hf_cfg.base_model)
+    with mlflow.start_run(run_name=cfg.get("mlflow", {}).get("run_name", None)):
+        # DVC linkage
+        if Path("dvc.lock").exists():
+            mlflow.set_tag("dvc_lock_sha256", sha256_file("dvc.lock"))
 
-    train_pipeline(
-        seed=seed,
-        output_dir=output_dir,
-        data_cfg=data_cfg,
-        hf_cfg=hf_cfg,
-        tr_cfg=tr_cfg,
-    )
+        # params
+        mlflow.log_params({
+            "seed": seed,
+            "output_dir": output_dir,
+            "data_path": data_cfg.local_path,
+            "base_model": hf_cfg.base_model,
+            "use_context": hf_cfg.use_context,
+            "max_length": hf_cfg.max_length,
+            "lr": tr_cfg.lr,
+            "weight_decay": tr_cfg.weight_decay,
+            "epochs": tr_cfg.num_train_epochs,
+            "train_bs": tr_cfg.per_device_train_batch_size,
+            "eval_bs": tr_cfg.per_device_eval_batch_size,
+            "warmup_ratio": tr_cfg.warmup_ratio,
+            "fp16": tr_cfg.fp16,
+            "eval_strategy": tr_cfg.eval_strategy,
+            "save_strategy": tr_cfg.save_strategy,
+        })
+
+        mlflow.set_tag("project", "AIDoc")
+        mlflow.set_tag("task", "med_entity_classification")
+
+        # device info
+        device_cfg = str(cfg.get("hardware", {}).get("device", "cpu"))
+        mlflow.set_tag("device", device_cfg)
+        if device_cfg.startswith("cuda") and torch.cuda.is_available():
+            mlflow.set_tag("cuda_name", torch.cuda.get_device_name(0))
+
+        logger.info("Config loaded from: %s", args.config)
+        logger.info("Model config: %s", args.model_config)
+        logger.info("Output dir: %s", output_dir)
+        logger.info("Dataset: %s", data_cfg.local_path)
+        logger.info("Base model: %s", hf_cfg.base_model)
+
+        result = train_pipeline(
+            seed=seed,
+            output_dir=output_dir,
+            data_cfg=data_cfg,
+            hf_cfg=hf_cfg,
+            tr_cfg=tr_cfg,
+        )
+
+        test_metrics = result.get("test_metrics", {})
+        for k, v in test_metrics.items():
+            if isinstance(v, (int, float)):
+                mlflow.log_metric(k, float(v))
+
+        mlflow.log_artifacts(output_dir, artifact_path="model")
+        if Path("dvc.lock").exists():
+            mlflow.log_artifact("dvc.lock", artifact_path="dvc")
+        mlflow.log_artifact(args.config, artifact_path="configs")
+        mlflow.log_artifact(args.model_config, artifact_path="configs")
 
 
 if __name__ == "__main__":
