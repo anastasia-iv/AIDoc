@@ -1,8 +1,8 @@
 stages:
   prepare:
-    cmd: python scripts/pubtatorparsing.py --input data/corpus_pubtator.txt --output data/corpus_pubtator.csv
+    cmd: python scripts/pubtatorparsing.py --input data/raw/corpus_pubtator.txt --output data/corpus_pubtator.csv
     deps:
-      - data/corpus_pubtator.txt
+      - data/raw/corpus_pubtator.txt
       - scripts/pubtatorparsing.py
     outs:
       - data/corpus_pubtator.csv

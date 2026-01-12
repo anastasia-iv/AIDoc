@@ -1,10 +1,10 @@
 schema: '2.0'
 stages:
   prepare:
-    cmd: python scripts/pubtatorparsing.py --input data/corpus_pubtator.txt 
+    cmd: python scripts/pubtatorparsing.py --input data/raw/corpus_pubtator.txt 
       --output data/corpus_pubtator.csv
     deps:
-    - path: data/corpus_pubtator.txt
+    - path: data/raw/corpus_pubtator.txt
       hash: md5
       md5: 6d72689e91bc5f2b3a63a2c7862b69b5
       size: 17012359
@@ -48,3 +48,34 @@ stages:
       md5: 0251e31f1c348aadb5cac90257168534.dir
       size: 639330199
       nfiles: 29
+  evaluate:
+    cmd: python scripts/evaluate.py --config configs/train.yaml --model_dir 
+      artifacts/medsearch-miniLM --out artifacts/eval/metrics.json
+    deps:
+    - path: artifacts/medsearch-miniLM
+      hash: md5
+      md5: 0251e31f1c348aadb5cac90257168534.dir
+      size: 639330199
+      nfiles: 29
+    - path: configs/train.yaml
+      hash: md5
+      md5: 533fccf9f0fbd104e1e64f17dccf4a43
+      size: 550
+    - path: data/corpus_pubtator.csv
+      hash: md5
+      md5: 2a4cb30d299437a1a18e6603931b5cbc
+      size: 355206431
+    - path: scripts/evaluate.py
+      hash: md5
+      md5: 0c9b3c54f64b755ae183ebb4964c2acc
+      size: 6034
+    - path: src/med_entity_clf
+      hash: md5
+      md5: 55a6923e4cd6f77f718b66ee8367474f.dir
+      size: 29840
+      nfiles: 14
+    outs:
+    - path: artifacts/eval/metrics.json
+      hash: md5
+      md5: f9fa265a97483cbd346b551005fd65d2
+      size: 284
