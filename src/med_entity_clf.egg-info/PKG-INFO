@@ -1,5 +1,5 @@
 Metadata-Version: 2.4
 Name: med-entity-clf
 Version: 0.1.0
-Summary: Medical entity type classification
-Requires-Python: >=3.10
+Summary: Medical entity classification project
+Requires-Python: >=3.11

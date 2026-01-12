@@ -217,3 +217,49 @@ pytest --cov=med_entity_clf --cov-report=term-missing
 Make it run	- Пайплайн обучается, инференс работает, ошибки ловятся тестами
 Make it right	-	Проверенная модель, метрики качества, регрессионные тесты пайплайна
 Make it fast	- частично	Структура готова, но нет профилирования
+
+
+## Reproducibility
+
+```bash
+git clone <repo>
+cd AIDoc
+dvc pull
+dvc repro
+```
+
+## DVC pipeline
+
+В проекте используется **DVC** для версионирования данных и артефактов обучения.
+Крупные файлы не хранятся в Git и лежат в удалённом S3-хранилище (Yandex Object Storage).
+
+### Pipeline stages
+
+Пайплайн описан в `dvc.yaml` и состоит из следующих этапов:
+
+- **prepare** — подготовка и предобработка данных  
+  `data/raw/ → data/processed/`
+- **train** — обучение модели  
+  `data/processed/ → models/`
+- **evaluate** — оценка качества модели  
+  `models/ → reports/`
+
+### Pipeline DAG
+
+```text
++----------------------------------+
+| data/raw/corpus_pubtator.txt.dvc |
++----------------------------------+
+                  *
+                  *
+            +---------+
+            | prepare |
+            +---------+
+                  *
+            +-------+
+            | train |
+            +-------+
+                  *
+            +----------+
+            | evaluate |
+            +----------+

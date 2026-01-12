@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 
 import numpy as np
-import evaluate
+# import evaluate
 from transformers import TrainingArguments, Trainer
 
 from .data import DataConfig, load_local_dataset, make_splits, build_label_maps
 from .modeling import HFConfig, get_tokenizer, get_model, format_input
+from sklearn.metrics import accuracy_score, f1_score
 
 logger = logging.getLogger("med_entity_clf")
 
@@ -40,15 +41,16 @@ def tokenize_dataset(dd, tokenizer, hf_cfg: HFConfig, data_cfg: DataConfig, labe
 
     return dd.map(_map, remove_columns=dd["train"].column_names)
 
-_ACC = evaluate.load("accuracy")
-_F1 = evaluate.load("f1")
+# _ACC = evaluate.load("accuracy")
+# _F1 = evaluate.load("f1")
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
+
     return {
-        "accuracy": _ACC.compute(predictions=preds, references=labels)["accuracy"],
-        "macro_f1": _F1.compute(predictions=preds, references=labels, average="macro")["f1"],
+        "accuracy": float(accuracy_score(labels, preds)),
+        "macro_f1": float(f1_score(labels, preds, average="macro")),
     }
 
 def train_pipeline(
