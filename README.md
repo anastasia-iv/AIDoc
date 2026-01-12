@@ -283,3 +283,28 @@ python scripts/train.py \
 ```bash
 mlflow ui --host 0.0.0.0 --port 5000
 ```
+
+## Docker офлайн
+
+Образ `ml-app:v1`, который при запуске:
+- читает CSV из `--input_path`
+- загружает модель из контейнера
+- делает предсказания
+- записывает CSV в `--output_path`
+
+### Сборка
+```bash
+docker build -t ml-app:v1 .
+```
+### Запуск
+```bash
+docker run --rm \
+  -v "$PWD/data:/data" \
+  -v "$PWD/preds:/preds" \
+  ml-app:v1 \
+  --input_path /data/sample.csv \
+  --output_path /preds/preds.csv \
+  --use_context
+  ```
+### Выходное значение
+Хранится по пути preds/preds.csv
