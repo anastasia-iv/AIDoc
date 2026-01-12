@@ -120,7 +120,6 @@ python scripts/parse_medmentions.py \
 3. После этого в папке data/ содержится необходимый формат датасета - medmentions_clf.csv
 4. Путь к нему прописывается в параметрах конфигурационного файла configs/train.yaml для запуска обучения модели 
 
-
 # Результаты экспериментов
 
 ### Постановка эксперимента
@@ -213,7 +212,6 @@ pytest -q
 pytest --cov=med_entity_clf --cov-report=term-missing
 ```
 
-## Кратко про тестирование
 Make it run	- Пайплайн обучается, инференс работает, ошибки ловятся тестами
 Make it right	-	Проверенная модель, метрики качества, регрессионные тесты пайплайна
 Make it fast	- частично	Структура готова, но нет профилирования
@@ -221,28 +219,37 @@ Make it fast	- частично	Структура готова, но нет п�
 
 ## Reproducibility
 
+Перед выполнением `dvc pull` необходимо настроить доступ к Yandex Object Storage через `dvc remote modify --local`
+
 ```bash
 git clone <repo>
 cd AIDoc
 dvc pull
 dvc repro
 ```
+## Запуск обучения
+
+```bash
+python scripts/train.py \
+  --config configs/train.yaml \
+  --model_config configs/model.yaml
+```
 
 ## DVC pipeline
 
 В проекте используется **DVC** для версионирования данных и артефактов обучения.
-Крупные файлы не хранятся в Git и лежат в удалённом S3-хранилище (Yandex Object Storage).
+Крупные файлы лежат в Yandex Object Storage.
 
 ### Pipeline stages
 
 Пайплайн описан в `dvc.yaml` и состоит из следующих этапов:
 
-- **prepare** — подготовка и предобработка данных  
-  `data/raw/ → data/processed/`
-- **train** — обучение модели  
-  `data/processed/ → models/`
-- **evaluate** — оценка качества модели  
-  `models/ → reports/`
+- **prepare** -  PubTator → CSV  
+  `data/corpus_pubtator.txt → data/corpus_pubtator.csv`
+- **train** - обучение модели  
+  `data/corpus_pubtator.csv → artifacts/medsearch-miniLM`
+- **evaluate** - расчёт метрик  
+  `artifacts/medsearch-miniLM → artifacts/eval/metrics.json`
 
 ### Pipeline DAG
 
@@ -265,10 +272,14 @@ dvc repro
             +----------+
 ```
 
-## MlFlow
+## MLflow: трекинг экспериментов
 
-Команда активации
+В проекте используется **MLflow** для логирования:
+- параметров обучения (learning rate, batch size, seed и др.);
+- метрик качества (accuracy, macro-F1, loss);
+- артефактов (модель, dvc.lock, конфигурационные файлы).
 
+### Запуск UI
 ```bash
 mlflow ui --host 0.0.0.0 --port 5000
 ```
