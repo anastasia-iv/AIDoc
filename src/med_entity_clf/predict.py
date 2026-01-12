@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any, Union
 import numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
+import torch
 from .modeling import format_input
 
 def _get_label(id2label, idx: int) -> str:
